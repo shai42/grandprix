@@ -455,4 +455,4 @@ class TicketsGUI:
                 messagebox.showerror("Error", "Failed to complete purchase. Please try again.")
         
         except ValueError:
-            messagebox.showerror("Error", "Please enter a valid number for group size.")
+            messagebox.showerror("Error", "Please enter a valid number for group size.") 

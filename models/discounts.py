@@ -39,4 +39,4 @@ class Discount:
     
     def apply_discount(self):
         """Apply the discount."""
-        return self.__percentage
+        return self.__percentage 

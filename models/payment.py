@@ -44,16 +44,7 @@ class Payment:
         """Set the payment method."""
         self.__method = method
     
-    def process_payment(self):
-        """Process the payment."""
-        print(f"Processing payment {self.__payment_id} for {self.__amount} via {self.__method}")
-        # In a real implementation, would handle payment processing logic
-        return True
-    
-    def add_ticket(self, ticket):
-        """Add a ticket to this payment."""
-        self.__tickets.append(ticket)
-    
-    def get_tickets(self):
-        """Get all tickets covered by this payment."""
-        return self.__tickets
+def process_payment(self):
+    if not self.__method or self.__amount <= 0:
+        raise ValueError("Invalid payment details")
+    return True  # Simulate success 

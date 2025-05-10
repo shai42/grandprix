@@ -112,3 +112,10 @@ class DataManager:
     def load_payments(self) -> List:
         """Load the list of payments."""
         return self.load_object("payments.pickle") or []
+    def save_discounts(self, discounts: list) -> bool:
+        """Save the list of discounts."""
+        return self.save_object(discounts, "discounts.pickle")
+
+    def load_discounts(self) -> list:
+        """Load the list of discounts."""
+        return self.load_object("discounts.pickle") or [] 

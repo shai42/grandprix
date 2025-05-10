@@ -135,4 +135,4 @@ class LoginWindow:
             register_window.destroy()
         
         register_button = tk.Button(register_window, text="Register", command=register, width=15)
-        register_button.pack(pady=10)
+        register_button.pack(pady=10) 
