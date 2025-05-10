@@ -9,7 +9,7 @@ class Ticket:
         self.__ticket_id = ticket_id
         self.__price = price
         self.__issue_date = issue_date if issue_date else datetime.now()
-        self.__discount = None  # Association: Ticket may have a Discount
+        self.__discount = None  #Association: Ticket may have a Discount
     
     def get_ticket_id(self):
         """Get the ticket's unique identifier."""
@@ -61,7 +61,7 @@ class SingleRacePass(Ticket):
     def calculate_price(self):
         """Calculate the price for a single race pass."""
         base_price = super().calculate_price()
-        return base_price  # Simple implementation, can be enhanced for special pricing
+        return base_price  
 
 
 class WeekendPackage(Ticket):

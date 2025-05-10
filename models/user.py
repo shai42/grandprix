@@ -10,7 +10,7 @@ class User:
         self.__name = name
         self.__email = email
         self.__password = password
-        self.__purchase_history = PurchaseHistory()  # Composition: User has a PurchaseHistory
+        self.__purchase_history = PurchaseHistory()  #Composition: User has a PurchaseHistory
     
     def get_user_id(self):
         """Get the user's unique identifier."""
@@ -61,7 +61,6 @@ class User:
     def make_reservation(self):
         """Make a new reservation."""
         print(f"Creating reservation for user {self.__user_id}")
-        # In a real implementation, would create and return a Reservation object
         return True
     
     def get_purchase_history(self):

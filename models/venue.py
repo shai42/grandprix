@@ -37,6 +37,5 @@ class Venue:
     
     def track_capacity(self):
         """Track capacity changes when tickets are sold or returned."""
-        #This is a simple implementation, an in real app would track available seats
         print(f"Tracking capacity for venue: {self.__venue_id}")
         return True

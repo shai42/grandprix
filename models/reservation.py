@@ -39,7 +39,6 @@ class Reservation:
     def generate_ticket(self):
         """Generate tickets for this reservation."""
         print(f"Generating tickets for reservation {self.__reservation_id}")
-        # In a real implementation, would create and return Ticket objects
         return True
     
     def add_ticket(self, ticket):
