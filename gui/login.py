@@ -4,7 +4,6 @@ Login window for the Grand Prix Experience ticket booking system.
 import tkinter as tk
 from tkinter import messagebox
 from models.user import User, Admin
-from data.manager import DataManager
 
 
 class LoginWindow:
@@ -12,10 +11,7 @@ class LoginWindow:
         self.master = master
         self.master.title("Grand Prix Experience - Login")
         self.master.geometry("400x300")
-        self.master.resizable(False, False)
-        
-        self.data_manager = DataManager()
-        
+        self.master.resizable(False, False)        
         self.create_widgets()
     
     def create_widgets(self):

@@ -1,23 +1,18 @@
 """
 Reservation GUI for the Grand Prix Experience ticket booking system.
 """
-import sys
-from pathlib import Path
+
 import tkinter as tk
 from tkinter import ttk, messagebox
 from models.reservation import Reservation
 from models.ticket import Ticket
-from data.manager import DataManager
 
 class ReservationGUI:
     def __init__(self, master, user):
         self.master = master
-        self.user = user
-        self.data_manager = DataManager()
-        
+        self.user = user        
         self.master.title(f"Grand Prix Experience - Reservations ({self.user.get_name()})")
         self.master.geometry("800x600")
-        
         self.create_widgets()
         self.load_reservations()
     

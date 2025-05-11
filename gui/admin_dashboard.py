@@ -5,14 +5,12 @@ Admin dashboard for the Grand Prix Experience ticket booking system.
 from pathlib import Path
 import tkinter as tk
 from tkinter import ttk, messagebox
-from data.manager import DataManager
 from models.discounts import Discount
 
 class AdminDashboard:
     def __init__(self, master, admin):
         self.master = master
         self.admin = admin
-        self.data_manager = DataManager()
         
         self.master.title(f"Grand Prix Experience - Admin Dashboard ({self.admin.get_name()})")
         self.master.geometry("800x600")

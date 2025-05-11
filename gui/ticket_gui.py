@@ -6,7 +6,6 @@ from pathlib import Path
 import tkinter as tk
 from tkinter import ttk, messagebox
 from datetime import datetime
-from data.manager import DataManager
 from models.ticket import SingleRacePass, WeekendPackage, SeasonMembership, GroupDiscount
 from models.discounts import Discount
 
@@ -21,7 +20,6 @@ class TicketsGUI:
         """
         self.root = root
         self.user = user
-        self.data_manager = DataManager()
         
         self.root.title("Grand Prix Experience - Tickets")
         self.root.geometry("800x600")
