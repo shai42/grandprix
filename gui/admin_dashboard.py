@@ -1,10 +1,12 @@
 """
 Admin dashboard for the Grand Prix Experience ticket booking system.
 """
+import sys
+from pathlib import Path
 import tkinter as tk
 from tkinter import ttk, messagebox
 from data.manager import DataManager
-from models.discount import Discount
+from models.discounts import Discount
 
 class AdminDashboard:
     def __init__(self, master, admin):

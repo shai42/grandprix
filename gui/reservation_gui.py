@@ -1,6 +1,8 @@
 """
 Reservation GUI for the Grand Prix Experience ticket booking system.
 """
+import sys
+from pathlib import Path
 import tkinter as tk
 from tkinter import ttk, messagebox
 from models.reservation import Reservation

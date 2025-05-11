@@ -1,12 +1,14 @@
 """
 Ticket management GUI for the Grand Prix Experience ticket booking system.
 """
+import sys
+from pathlib import Path
 import tkinter as tk
 from tkinter import ttk, messagebox
 from datetime import datetime
 from data.manager import DataManager
 from models.ticket import SingleRacePass, WeekendPackage, SeasonMembership, GroupDiscount
-from models.discount import Discount
+from models.discounts import Discount
 
 class TicketsGUI:
     def __init__(self, root, user=None):

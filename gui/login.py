@@ -1,6 +1,8 @@
 """
 Login window for the Grand Prix Experience ticket booking system.
 """
+import sys
+from pathlib import Path
 import tkinter as tk
 from tkinter import messagebox
 from models.user import User, Admin
