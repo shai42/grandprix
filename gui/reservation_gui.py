@@ -162,6 +162,6 @@ class ReservationGUI:
     
     def new_reservation(self):
         """Create a new reservation."""
-        from .tickets_gui import TicketBookingGUI
+        from .ticket_gui import TicketsGUI
         ticket_window = tk.Toplevel(self.master)
-        TicketBookingGUI(ticket_window, self.user) 
+        TicketsGUI(ticket_window, self.user) 

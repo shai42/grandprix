@@ -73,8 +73,8 @@ class LoginWindow:
                 from .admin_dashboard import AdminDashboard
                 AdminDashboard(root, user)
             else:
-                from .tickets_gui import TicketBookingGUI
-                TicketBookingGUI(root, user)
+                from .ticket_gui import TicketsGUI
+                TicketsGUI(root, user)
             root.mainloop()
         else:
             messagebox.showerror("Error", "Invalid email or password")
