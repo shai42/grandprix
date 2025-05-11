@@ -1,50 +1,24 @@
 """
 Payment class for the Grand Prix Experience ticket booking system.
 """
-from datetime import datetime
-
 class Payment:
-    def __init__(self, payment_id=0, amount=0.0, date=None, method=""):
-        """Initialize a new Payment object"""
-        self.__payment_id = payment_id
+    def __init__(self, paymentID, amount, date, method):
+        self.__paymentID = paymentID
         self.__amount = amount
-        self.__date = date if date else datetime.now()
-        self.__method = method
-        self.__tickets = []  # Association: Payment covers tickets
-    
-    def get_payment_id(self):
-        """Get the payment's unique identifier."""
-        return self.__payment_id
-    
-    def set_payment_id(self, id):
-        """Set the payment's unique identifier."""
-        self.__payment_id = id
-    
-    def get_amount(self):
-        """Get the payment amount."""
-        return self.__amount
-    
-    def set_amount(self, amount):
-        """Set the payment amount."""
-        self.__amount = amount
-    
-    def get_date(self):
-        """Get the payment date."""
-        return self.__date
-    
-    def set_date(self, date):
-        """Set the payment date."""
         self.__date = date
-    
-    def get_method(self):
-        """Get the payment method."""
-        return self.__method
-    
-    def set_method(self, method):
-        """Set the payment method."""
         self.__method = method
-    
-def process_payment(self):
-    if not self.__method or self.__amount <= 0:
-        raise ValueError("Invalid payment details")
-    return True  # Simulate success 
+
+    def getPaymentID(self): return self.__paymentID
+    def setPaymentID(self, id): self.__paymentID = id
+
+    def getAmount(self): return self.__amount
+    def setAmount(self, amount): self.__amount = amount
+
+    def getDate(self): return self.__date
+    def setDate(self, date): self.__date = date
+
+    def getMethod(self): return self.__method
+    def setMethod(self, method): self.__method = method
+
+    def processPayment(self):
+        print(f"Processing {self.__method} payment of {self.__amount} AED")
