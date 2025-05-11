@@ -8,10 +8,10 @@ import os
 DATA_DIR = "data"
 
 # Data files
-USERS_FILE = os.path.join(DATA_DIR, "users.pickle")
-VENUES_FILE = os.path.join(DATA_DIR, "venues.pickle")
-EVENTS_FILE = os.path.join(DATA_DIR, "events.pickle")
-TICKETS_FILE = os.path.join(DATA_DIR, "tickets.pickle")
-RESERVATIONS_FILE = os.path.join(DATA_DIR, "reservations.pickle")
-PAYMENTS_FILE = os.path.join(DATA_DIR, "payments.pickle")
-DISCOUNTS_FILE = os.path.join(DATA_DIR, "discounts.pickle") 
+USERS_FILE = os.path.join(DATA_DIR, "user.pickle")
+VENUES_FILE = os.path.join(DATA_DIR, "venue.pickle")
+EVENTS_FILE = os.path.join(DATA_DIR, "event.pickle")
+TICKETS_FILE = os.path.join(DATA_DIR, "ticket.pickle")
+RESERVATIONS_FILE = os.path.join(DATA_DIR, "reservation.pickle")
+PAYMENTS_FILE = os.path.join(DATA_DIR, "payment.pickle")
+DISCOUNTS_FILE = os.path.join(DATA_DIR, "discount.pickle") 
