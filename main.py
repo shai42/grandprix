@@ -301,12 +301,12 @@ class GrandPrixApp:
         
         # Initialize session variables and events
         self.current_user = None
-        self.venue = Venue(1, "Silverstone Circuit", 150000, 10, 10)
         self.events = [
-            Event(1, "Silverstone GP", date(2025, 6, 1), self.venue),
-            Event(2, "Monaco GP", date(2025, 6, 15), self.venue),
-            Event(3, "Yas Marina GP", date(2025, 7, 1), self.venue)
+            Event(1, "Silverstone GP", date(2025, 6, 1), Venue(1, "Silverstone Circuit", 150000, 10, 10)),
+            Event(2, "Monaco GP", date(2025, 6, 15), Venue(2, "Monaco Circuit", 120000, 10, 10)),
+            Event(3, "Yas Marina GP", date(2025, 7, 1), Venue(3, "Yas Marina Circuit", 130000, 10, 10))
         ]
+
         # Load user and discount data from files
         self.load_data()
         
@@ -684,7 +684,7 @@ class GrandPrixApp:
 
         # Continue button to confirm selection and move to seat selection
         def proceed():
-            selected = combo.get().split(" - ")[0] # Extract the date from the selection
+            selected = combo.get().split(" – ")[0]  # Extract the date from the selection
             event_window.destroy()
             self.show_seat_selection(ticket_type, selected)  # Pass selected event date
 
