@@ -409,7 +409,8 @@ class GrandPrixApp:
             (SeasonMembership, "Season Membership")
         ]):
             btn = ttk.Button(ticket_buttons_frame, text=label, style="Large.TButton",
-                           command=lambda t=ticket_type: self.show_seat_selection(t))
+                 command=lambda t=ticket_type: self.select_event_before_booking(t))
+
             btn.pack(fill="x", pady=10, padx=5)
         
         # Bottom buttons
@@ -466,6 +467,17 @@ class GrandPrixApp:
                 messagebox.showerror("Error", str(e))
 
         ttk.Button(main_frame, text="Save Changes", command=save_profile).grid(row=4, column=0, columnspan=2, pady=15)
+        ttk.Button(main_frame, text="Delete My Account", command=lambda: self.delete_current_account(profile_window), style="TButton").grid(row=5, column=0, columnspan=2, pady=10)
+        
+    def delete_current_account(self, window):
+        if messagebox.askyesno("Confirm", "Are you sure you want to delete your account? This action is irreversible."):
+            self.users = [u for u in self.users if u.userID != self.current_user.userID]
+            self.save_data()
+            messagebox.showinfo("Deleted", "Your account has been deleted.")
+            window.destroy()
+            self.current_user = None
+            self.create_login_frame()
+
 
     def show_purchase_history(self):
         history_window = tk.Toplevel(self.root)
@@ -521,7 +533,35 @@ class GrandPrixApp:
                 ttk.Button(ticket_frame, text="Cancel Ticket", command=delete_ticket).pack(anchor="e", pady=5)
             canvas.pack(side="left", fill="both", expand=True)
             scrollbar.pack(side="right", fill="y")
-        
+    
+    def select_event_before_booking(self, ticket_type):
+        event_window = tk.Toplevel(self.root)
+        event_window.title("Select Event")
+        event_window.geometry("400x200")
+
+        frame = ttk.Frame(event_window, padding=20)
+        frame.pack(fill="both", expand=True)
+
+        ttk.Label(frame, text="Choose an Event:", style='Header.TLabel').pack(pady=10)
+
+        event_var = tk.StringVar()
+        events = [
+            ("2025-06-01", "Silverstone"),
+            ("2025-06-15", "Monaco"),
+            ("2025-07-01", "Yas Marina")
+        ]
+        combo = ttk.Combobox(frame, textvariable=event_var, state="readonly",
+                         values=[f"{date} – {name}" for date, name in events])
+        combo.pack(pady=10)
+        combo.current(0)
+
+        def proceed():
+            selected = combo.get().split(" – ")[0]
+            event_window.destroy()
+            self.show_seat_selection(ticket_type, selected)
+
+        ttk.Button(frame, text="Continue", command=proceed).pack(pady=10)
+    
     def show_race_info(self):
         info_window = tk.Toplevel(self.root)
         info_window.title("Race & Venue Info")
@@ -544,7 +584,7 @@ class GrandPrixApp:
 
         ttk.Label(frame, text=info, justify="left", style='TLabel').pack(anchor="w")
     
-    def show_seat_selection(self, ticket_type):
+    def show_seat_selection(self, ticket_type, preselected_date=None):
         seat_window = tk.Toplevel(self.root)
         seat_window.title("Select Your Seat")
         seat_window.geometry("800x600")
@@ -624,14 +664,9 @@ class GrandPrixApp:
         reserved = ttk.Label(legend_frame, text="Reserved", background="red", width=10)
         reserved.pack(side="left", padx=10)
         
-        # Race Date selection
-        ttk.Label(main_frame, text="Select Race Date:").pack(pady=(10, 5))
-        date_var = tk.StringVar()
-        date_combo = ttk.Combobox(main_frame, textvariable=date_var, values=[
-            "2025-06-01", "2025-06-15", "2025-07-01"
-        ])
-        date_combo.pack()
-        date_combo.current(0)
+        # Race Date confirmation
+        ttk.Label(main_frame, text=f"Race Date: {preselected_date}", style="TLabel").pack(pady=(10, 5))
+
 
         # Add a "Continue to Payment" button
         def proceed_to_payment():
@@ -640,10 +675,7 @@ class GrandPrixApp:
                 return
 
             # Assign selected race date to each ticket before purchase
-            for seat in selected_seats:
-                seat.race_date = date_var.get()  # attach race date to each seat/ticket
-
-            self.finalize_purchase(selected_seats, ticket_type, group_var.get(), date_var.get())
+            self.finalize_purchase(selected_seats, ticket_type, group_var.get(), preselected_date)
             seat_window.destroy()
 
 
@@ -674,6 +706,11 @@ class GrandPrixApp:
 
         # Loop over each seat in the selection
         for seat in seats:
+            
+            if len(self.venue.get_available_seats()) < len(seats):
+                messagebox.showerror("Full", "Not enough seats available for your group.")
+                return
+
             if seat.reserve():
                 ticket_id = self.get_next_ticket_id()
             
