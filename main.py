@@ -341,10 +341,11 @@ class GrandPrixApp:
                 if ticket.seat and hasattr(ticket.seat, "button"):
                     del ticket.seat.button
     def strip_gui_from_venue(self):
-        for row in self.venue.seats:
-            for seat in row:
-                if hasattr(seat, "button"):
-                    del seat.button
+        for event in self.events:
+            for row in event.venue.seats:
+                for seat in row:
+                    if hasattr(seat, "button"):
+                        del seat.button
 
     def save_data(self):
         # Clean GUI elements and save all user + discount data to disk
@@ -684,10 +685,14 @@ class GrandPrixApp:
 
         # Continue button to confirm selection and move to seat selection
         def proceed():
-            selected = combo.get().split(" – ")[0]  # Extract the date from the selection
+            selected_label = combo.get().split(" – ")[0]
+            selected_date = datetime.strptime(selected_label.strip(), "%Y-%m-%d").date()
+            event = next((e for e in self.events if e.date == selected_date), None)
+            if not event:
+                messagebox.showerror("Error", "Event not found.")
+                return
             event_window.destroy()
-            self.show_seat_selection(ticket_type, selected)  # Pass selected event date
-
+            self.show_seat_selection(ticket_type, event)
         ttk.Button(frame, text="Continue", command=proceed).pack(pady=10)
     
     def show_race_info(self):
@@ -716,7 +721,7 @@ class GrandPrixApp:
         # Display the information as a left-aligned label
         ttk.Label(frame, text=info, justify="left", style='TLabel').pack(anchor="w")
     
-    def show_seat_selection(self, ticket_type, preselected_date=None):
+    def show_seat_selection(self, ticket_type, selected_event):
         # Create a popup window for seat selection
         seat_window = tk.Toplevel(self.root)
         seat_window.title("Select Your Seat")
@@ -725,8 +730,8 @@ class GrandPrixApp:
         seat_width = 50
         seat_height = 40
         padding = 150
-        total_width = self.venue.seats_per_row * seat_width + padding
-        total_height = self.venue.rows * seat_height + 250
+        total_width = selected_event.venue.seats_per_row * seat_width + padding
+        total_height = selected_event.venue.rows * seat_height + 250
         seat_window.geometry(f"{total_width}x{total_height}")
         
         # Frame for seat selection UI
@@ -749,9 +754,9 @@ class GrandPrixApp:
         seat_frame.pack()
 
         # Generate seat buttons and apply styles depending on availability
-        for r in range(self.venue.rows):
-            for s in range(self.venue.seats_per_row):
-                seat = self.venue.seats[r][s]
+        for r in range(selected_event.venue.rows):
+            for s in range(selected_event.venue.seats_per_row):
+                seat = selected_event.venue.seats[r][s]
                 style = "Reserved.TButton" if seat.is_reserved else "Available.TButton"
                 state = "disabled" if seat.is_reserved else "normal"
 
@@ -782,7 +787,7 @@ class GrandPrixApp:
 
         # Button to proceed to payment after seat selection
         def proceed_to_payment():
-            event = next((e for e in self.events if str(e.date) == preselected_date), None)
+            event = selected_event
             if not event:
                 messagebox.showerror("Error", "Selected event not found.")
                 return
@@ -831,7 +836,7 @@ class GrandPrixApp:
         # Iterate through selected seats and reserve them
         for seat in seats:
             
-            if len(self.venue.get_available_seats()) < len(seats):
+            if len(event.venue.get_available_seats()) < len(seats):
                 messagebox.showerror("Full", "Not enough seats available for your group.")
                 return
 
@@ -1020,10 +1025,19 @@ class GrandPrixApp:
         ttk.Button(controls_frame, text="Manage Discounts", 
                  command=self.current_user.manage_discounts, width=20).pack(fill="x", pady=5)
         
-        ttk.Button(controls_frame, text="View Venue Status",
-                 command=lambda: messagebox.showinfo("Venue Status", 
-                 f"Available Seats: {len(self.venue.get_available_seats())}"), 
-                 width=20).pack(fill="x", pady=5)
+        ttk.Button(
+                controls_frame,
+                text="View Venue Status",
+                command=lambda: messagebox.showinfo(
+                    "Venue Status",
+                    "\n".join([
+                        f"{event.name} ({event.date.strftime('%Y-%m-%d')}): {len(event.venue.get_available_seats())} seats available"
+                        for event in self.events
+                ])
+            ),
+            width=20
+        ).pack(fill="x", pady=5)
+
 
     def logout(self):
         """Log out the current user and return to the login screen."""
