@@ -3,7 +3,18 @@ from tkinter import ttk, messagebox, simpledialog
 from datetime import datetime
 import pickle
 import re
+# -------------------- CUSTOM EXCEPTIONS --------------------#
+class InvalidEmailError(Exception):
+    pass
 
+class DuplicateUserError(Exception):
+    pass
+
+class PaymentError(Exception):
+    pass
+
+class InvalidDiscountError(Exception):
+    pass
 # -------------------- THE CLASS IMPLEMENTATIONS ----------------#
 class User:
     def __init__(self, userID, name, email, password):
@@ -37,6 +48,7 @@ class Ticket:
         self.price = price
         self.issueDate = datetime.now()
         self.seat = None
+        self.race_date = None  
 
     def calculate_price(self):
         return self.price
@@ -125,18 +137,25 @@ class DiscountManager:
     def manage_discounts(self):
         management_window = tk.Toplevel()
         management_window.title("Discount Management")
+        management_window.geometry("400x300")
+        management_window.minsize(400, 300)
         
-        ttk.Label(management_window, text="Discount ID:").grid(row=0, column=0)
-        ttk.Label(management_window, text="Description:").grid(row=1, column=0)
-        ttk.Label(management_window, text="Percentage:").grid(row=2, column=0)
+        content_frame = ttk.Frame(management_window, padding=20)
+        content_frame.pack(fill="both", expand=True)
         
-        id_entry = ttk.Entry(management_window)
-        desc_entry = ttk.Entry(management_window)
-        perc_entry = ttk.Entry(management_window)
+        ttk.Label(content_frame, text="Discount ID:").grid(row=0, column=0, sticky="w", pady=5)
+        ttk.Label(content_frame, text="Description:").grid(row=1, column=0, sticky="w", pady=5)
+        ttk.Label(content_frame, text="Percentage:").grid(row=2, column=0, sticky="w", pady=5)
         
-        id_entry.grid(row=0, column=1)
-        desc_entry.grid(row=1, column=1)
-        perc_entry.grid(row=2, column=1)
+        id_entry = ttk.Entry(content_frame, width=30)
+        desc_entry = ttk.Entry(content_frame, width=30)
+        perc_entry = ttk.Entry(content_frame, width=30)
+        
+        id_entry.grid(row=0, column=1, sticky="ew", padx=5)
+        desc_entry.grid(row=1, column=1, sticky="ew", padx=5)
+        perc_entry.grid(row=2, column=1, sticky="ew", padx=5)
+        
+        content_frame.columnconfigure(1, weight=1)
         
         def add_discount():
             try:
@@ -148,10 +167,14 @@ class DiscountManager:
                 self.discounts.append(discount)
                 self.save_discounts()
                 messagebox.showinfo("Success", "Discount added successfully")
+                management_window.destroy()  # ✅ Close the window after success
             except Exception as e:
                 messagebox.showerror("Error", f"Invalid discount data: {str(e)}")
 
-        ttk.Button(management_window, text="Add Discount", command=add_discount).grid(row=3, columnspan=2)
+        btn_frame = ttk.Frame(content_frame)
+        btn_frame.grid(row=3, column=0, columnspan=2, pady=15)
+        
+        ttk.Button(btn_frame, text="Add Discount", command=add_discount, width=20).pack()
 
 class Payment:
     def __init__(self, paymentID, amount, method, card_number=None, expiry=None):
@@ -186,51 +209,92 @@ class PurchaseHistory:
 class GrandPrixApp:
     def __init__(self):
         self.root = tk.Tk()
+        self.root.configure(bg="#f5f0e1")  # Set root window to light beige
         self.root.title("Grand Prix Experience")
-        self.style = ttk.Style()
-        self.style.configure('TButton', padding=6, relief="flat", background="#4CAF50")
+        self.root.geometry("1400x900")  # Set initial window size
+        self.root.minsize(600, 400)    # Set minimum window size
         
-        # Create custom styles for seat buttons
-        self.style.configure('green.TButton', background='green')
-        self.style.configure('red.TButton', background='red')
+        # Apply a theme
+        self.style = ttk.Style()
+        self.style.theme_use('clam')  # clam allows bg color override
+
+        # Light beige theme styling
+        bg_color = "#f5f0e1"
+        self.style.configure('.', background=bg_color)
+        self.style.configure('TFrame', background=bg_color)
+        self.style.configure('TLabel', background=bg_color, font=('Helvetica', 10))
+        self.style.configure('Header.TLabel', background=bg_color, font=('Helvetica', 16, 'bold'))
+        self.style.configure('TButton', font=('Helvetica', 10), padding=6)
+        self.style.configure('Large.TButton', font=('Helvetica', 12), padding=8)
+
+        
+        # Configure custom colors for seat buttons
+        self.style.configure('Available.TButton', background='green')
+        self.style.configure('Reserved.TButton', background='red')
+        self.style.configure('Selected.TButton', background='blue')  # Added missing style
         
         self.current_user = None
-        self.venue = Venue(1, "Silverstone Circuit", 150000, 50, 300)
+        self.venue = Venue(1, "Silverstone Circuit", 150000, 10, 10)
         self.load_data()
+        
+        # Main container
+        self.main_container = ttk.Frame(self.root)
+        self.main_container.pack(fill="both", expand=True)
+        
+        # Create login frame
         self.create_login_frame()
 
     def load_data(self):
         try:
             with open('users.pkl', 'rb') as f:
                 self.users = pickle.load(f)
+        except (FileNotFoundError, EOFError):
+            self.users = []
+
+        try:
             with open('discounts.pkl', 'rb') as f:
                 self.discounts = pickle.load(f)
-        except FileNotFoundError:
-            self.users = []
+        except (FileNotFoundError, EOFError):
             self.discounts = []
 
     def save_data(self):
         with open('users.pkl', 'wb') as f:
             pickle.dump(self.users, f)
+
         with open('discounts.pkl', 'wb') as f:
             pickle.dump(self.discounts, f)
 
     def create_login_frame(self):
-        self.login_frame = ttk.Frame(self.root, padding=20)
-        self.login_frame.pack()
+        self.clear_main_container()
         
-        ttk.Label(self.login_frame, text="Grand Prix Experience", font=('Arial', 16)).grid(row=0, columnspan=2, pady=10)
+        # Center the login form
+        spacer_top = ttk.Frame(self.main_container)
+        spacer_top.pack(fill="both", expand=True)
         
-        ttk.Label(self.login_frame, text="Email:").grid(row=1, column=0)
+        self.login_frame = ttk.Frame(self.main_container, padding=20, relief="ridge", borderwidth=2)
+        self.login_frame.pack(fill="both", padx=50, pady=20)
+        
+        # Make login form elements expand with window
+        self.login_frame.columnconfigure(1, weight=1)
+        
+        ttk.Label(self.login_frame, text="Grand Prix Experience", style='Header.TLabel').grid(row=0, columnspan=2, pady=10)
+        
+        ttk.Label(self.login_frame, text="Email:").grid(row=1, column=0, sticky="w", pady=5)
         self.email_entry = ttk.Entry(self.login_frame)
-        self.email_entry.grid(row=1, column=1)
+        self.email_entry.grid(row=1, column=1, sticky="ew", padx=5)
         
-        ttk.Label(self.login_frame, text="Password:").grid(row=2, column=0)
+        ttk.Label(self.login_frame, text="Password:").grid(row=2, column=0, sticky="w", pady=5)
         self.password_entry = ttk.Entry(self.login_frame, show="*")
-        self.password_entry.grid(row=2, column=1)
+        self.password_entry.grid(row=2, column=1, sticky="ew", padx=5)
         
-        ttk.Button(self.login_frame, text="Login", command=self.login).grid(row=3, column=0, pady=10)
-        ttk.Button(self.login_frame, text="Register", command=self.create_registration_frame).grid(row=3, column=1, pady=10)
+        button_frame = ttk.Frame(self.login_frame)
+        button_frame.grid(row=3, column=0, columnspan=2, pady=15)
+        
+        ttk.Button(button_frame, text="Login", command=self.login, width=12).pack(side="left", padx=5)
+        ttk.Button(button_frame, text="Register", command=self.create_registration_frame, width=12).pack(side="left", padx=5)
+        
+        spacer_bottom = ttk.Frame(self.main_container)
+        spacer_bottom.pack(fill="both", expand=True)
 
     def login(self):
         email = self.email_entry.get()
@@ -246,32 +310,43 @@ class GrandPrixApp:
         messagebox.showerror("Error", "Invalid email or password")
 
     def create_registration_frame(self):
-        reg_window = tk.Toplevel()
+        reg_window = tk.Toplevel(self.root)
         reg_window.title("Registration")
+        reg_window.geometry("500x350")
+        reg_window.minsize(400, 300)
         
-        ttk.Label(reg_window, text="Name:").grid(row=0, column=0)
-        name_entry = ttk.Entry(reg_window)
-        name_entry.grid(row=0, column=1)
+        content_frame = ttk.Frame(reg_window, padding=20)
+        content_frame.pack(fill="both", expand=True)
         
-        ttk.Label(reg_window, text="Email:").grid(row=1, column=0)
-        email_entry = ttk.Entry(reg_window)
-        email_entry.grid(row=1, column=1)
+        # Make form elements responsive
+        content_frame.columnconfigure(1, weight=1)
         
-        ttk.Label(reg_window, text="Password:").grid(row=2, column=0)
-        password_entry = ttk.Entry(reg_window, show="*")
-        password_entry.grid(row=2, column=1)
+        ttk.Label(content_frame, text="Registration", style='Header.TLabel').grid(row=0, columnspan=2, pady=10)
         
-        ttk.Label(reg_window, text="Admin Code (if applicable):").grid(row=3, column=0)
-        admin_code_entry = ttk.Entry(reg_window, show="*")
-        admin_code_entry.grid(row=3, column=1)
+        ttk.Label(content_frame, text="Name:").grid(row=1, column=0, sticky="w", pady=5)
+        name_entry = ttk.Entry(content_frame)
+        name_entry.grid(row=1, column=1, sticky="ew", padx=5)
+        
+        ttk.Label(content_frame, text="Email:").grid(row=2, column=0, sticky="w", pady=5)
+        email_entry = ttk.Entry(content_frame)
+        email_entry.grid(row=2, column=1, sticky="ew", padx=5)
+        
+        ttk.Label(content_frame, text="Password:").grid(row=3, column=0, sticky="w", pady=5)
+        password_entry = ttk.Entry(content_frame, show="*")
+        password_entry.grid(row=3, column=1, sticky="ew", padx=5)
+        
+        ttk.Label(content_frame, text="Admin Code (if applicable):").grid(row=4, column=0, sticky="w", pady=5)
+        admin_code_entry = ttk.Entry(content_frame, show="*")
+        admin_code_entry.grid(row=4, column=1, sticky="ew", padx=5)
         
         def register_user():
             try:
-                if not re.match(r"[^@]+@[^@]+\.[^@]+", email_entry.get()):
-                    raise ValueError("Invalid email format")
+                email= email_entry.get()
+                if not re.match(r"[^@]+@[^@]+\.[^@]+", email):
+                    raise InvalidEmailError("Invalid email format")
                 
                 if any(user.email == email_entry.get() for user in self.users):
-                    raise ValueError("Email already registered")
+                    raise DuplicateUserError("Email already registered.")
                 
                 new_id = len(self.users) + 1
                 if admin_code_entry.get() == "ADMIN123":
@@ -283,151 +358,493 @@ class GrandPrixApp:
                 self.save_data()
                 messagebox.showinfo("Success", "Registration successful!")
                 reg_window.destroy()
-            except Exception as e:
+            except (InvalidEmailError, DuplicateUserError) as e:
                 messagebox.showerror("Error", str(e))
         
-        ttk.Button(reg_window, text="Register", command=register_user).grid(row=4, columnspan=2)
+        button_frame = ttk.Frame(content_frame)
+        button_frame.grid(row=5, column=0, columnspan=2, pady=15)
+        
+        ttk.Button(button_frame, text="Register", command=register_user, width=15).pack()
 
-    def clear_frames(self):
-        # Clear all frames from the root window
-        for widget in self.root.winfo_children():
+    def clear_main_container(self):
+        # Clear all widgets from the main container
+        for widget in self.main_container.winfo_children():
             widget.destroy()
 
     def show_dashboard(self):
-        self.clear_frames()
+        self.clear_main_container()
         
-        main_frame = ttk.Frame(self.root, padding=20)
-        main_frame.pack(fill="both", expand=True)
+        # Create a responsive dashboard layout
+        dashboard_frame = ttk.Frame(self.main_container, padding=20)
+        dashboard_frame.pack(fill="both", expand=True)
         
-        ttk.Label(main_frame, text=f"Welcome, {self.current_user.name}!", font=('Arial', 16)).pack(pady=10)
+        # Configure column weights for responsiveness
+        dashboard_frame.columnconfigure(0, weight=1)
+        dashboard_frame.rowconfigure(1, weight=1)
         
-        ticket_frame = ttk.LabelFrame(main_frame, text="Ticket Options", padding=10)
-        ticket_frame.pack(fill="both", expand=True, pady=10)
+        # Header
+        header_frame = ttk.Frame(dashboard_frame)
+        header_frame.grid(row=0, column=0, sticky="ew", pady=10)
         
-        ttk.Button(ticket_frame, text="Single Race Pass", 
-                  command=lambda: self.show_seat_selection(SingleRacePass)).pack(fill="x", pady=5)
+        ttk.Label(header_frame, text=f"Welcome, {self.current_user.name}!", style='Header.TLabel').pack(side="left")
+        ttk.Button(header_frame, text="Logout", command=self.logout, width=10).pack(side="right")
         
-        ttk.Button(ticket_frame, text="Weekend Package", 
-                  command=lambda: self.show_seat_selection(WeekendPackage)).pack(fill="x", pady=5)
+        # Main content with tickets and management options
+        content_frame = ttk.Frame(dashboard_frame)
+        content_frame.grid(row=1, column=0, sticky="nsew")
+        content_frame.columnconfigure(0, weight=1)
+        content_frame.rowconfigure(0, weight=1)
         
-        ttk.Button(ticket_frame, text="Season Membership", 
-                  command=lambda: self.show_seat_selection(SeasonMembership)).pack(fill="x", pady=5)
+        # Left panel with ticket options
+        left_panel = ttk.LabelFrame(content_frame, text="Ticket Options", padding=10)
+        left_panel.grid(row=0, column=0, sticky="nsew", padx=(0, 5))
         
-        history_button = ttk.Button(main_frame, text="View Purchase History", 
-                                   command=self.show_purchase_history)
-        history_button.pack(pady=5)
+        ticket_buttons_frame = ttk.Frame(left_panel)
+        ticket_buttons_frame.pack(fill="both", expand=True)
         
-        logout_button = ttk.Button(main_frame, text="Logout", command=self.logout)
-        logout_button.pack(pady=5)
+        # Create ticket option buttons
+        for i, (ticket_type, label) in enumerate([
+            (SingleRacePass, "Single Race Pass"),
+            (WeekendPackage, "Weekend Package"),
+            (SeasonMembership, "Season Membership")
+        ]):
+            btn = ttk.Button(ticket_buttons_frame, text=label, style="Large.TButton",
+                           command=lambda t=ticket_type: self.show_seat_selection(t))
+            btn.pack(fill="x", pady=10, padx=5)
         
+        # Bottom buttons
+        bottom_frame = ttk.Frame(dashboard_frame)
+        bottom_frame.grid(row=2, column=0, sticky="ew", pady=10)
+        ttk.Button(bottom_frame, text="My Profile", 
+           command=self.show_user_profile, width=20).pack(pady=5)
+
+        ttk.Button(bottom_frame, text="View Purchase History", 
+                 command=self.show_purchase_history, width=20).pack(pady=5)
+        
+        ttk.Button(bottom_frame, text="View Race Info", command=self.show_race_info, width=20).pack(pady=5)
+
         # Show admin dashboard if user is an admin
         if isinstance(self.current_user, Admin):
-            self.show_admin_dashboard()
+            self.show_admin_dashboard(dashboard_frame)
+            
+    def show_user_profile(self):
+        profile_window = tk.Toplevel(self.root)
+        profile_window.title("My Profile")
+        profile_window.geometry("400x300")
+    
+        main_frame = ttk.Frame(profile_window, padding=20)
+        main_frame.pack(fill="both", expand=True)
+    
+        ttk.Label(main_frame, text="Edit Profile", style="Header.TLabel").grid(row=0, columnspan=2, pady=10)
+
+        ttk.Label(main_frame, text="Name:").grid(row=1, column=0, sticky="w", pady=5)
+        name_entry = ttk.Entry(main_frame)
+        name_entry.insert(0, self.current_user.name)
+        name_entry.grid(row=1, column=1, sticky="ew")
+
+        ttk.Label(main_frame, text="Email:").grid(row=2, column=0, sticky="w", pady=5)
+        email_entry = ttk.Entry(main_frame)
+        email_entry.insert(0, self.current_user.email)
+        email_entry.grid(row=2, column=1, sticky="ew")
+
+        ttk.Label(main_frame, text="Password:").grid(row=3, column=0, sticky="w", pady=5)
+        password_entry = ttk.Entry(main_frame, show="*")
+        password_entry.insert(0, self.current_user.password)
+        password_entry.grid(row=3, column=1, sticky="ew")
+
+        def save_profile():
+            try:
+                if not re.match(r"[^@]+@[^@]+\.[^@]+", email_entry.get()):
+                    raise InvalidEmailError("Invalid email format.")
+                self.current_user.name = name_entry.get()
+                self.current_user.email = email_entry.get()
+                self.current_user.password = password_entry.get()
+                self.save_data()
+                messagebox.showinfo("Success", "Profile updated.")
+                profile_window.destroy()
+            except InvalidEmailError as e:
+                messagebox.showerror("Error", str(e))
+
+        ttk.Button(main_frame, text="Save Changes", command=save_profile).grid(row=4, column=0, columnspan=2, pady=15)
 
     def show_purchase_history(self):
-        history_window = tk.Toplevel()
+        history_window = tk.Toplevel(self.root)
         history_window.title("Purchase History")
+        history_window.geometry("600x400")
+        history_window.minsize(400, 300)
+        
+        main_frame = ttk.Frame(history_window, padding=20)
+        main_frame.pack(fill="both", expand=True)
+        
+        ttk.Label(main_frame, text="Purchase History", style='Header.TLabel').pack(anchor="w", pady=(0, 10))
         
         tickets = self.current_user.view_history()
         
         if not tickets:
-            ttk.Label(history_window, text="No purchase history found.").pack(padx=20, pady=20)
+            ttk.Label(main_frame, text="No purchase history found.").pack(padx=20, pady=20)
         else:
+            # Create a scrollable frame for ticket history
+            canvas = tk.Canvas(main_frame)
+            scrollbar = ttk.Scrollbar(main_frame, orient="vertical", command=canvas.yview)
+            
+            scrollable_frame = ttk.Frame(canvas)
+            scrollable_frame.bind(
+                "<Configure>",
+                lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
+            )
+            
+            canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+            canvas.configure(yscrollcommand=scrollbar.set)
+            
             for i, ticket in enumerate(tickets):
-                ticket_frame = ttk.LabelFrame(history_window, text=f"Ticket #{ticket.ticketID}")
-                ticket_frame.pack(fill="x", padx=10, pady=5)
+                ticket_frame = ttk.LabelFrame(scrollable_frame, text=f"Ticket #{ticket.ticketID}", padding=10)
+                ticket_frame.pack(fill="x", pady=5)
                 
                 ttk.Label(ticket_frame, text=f"Issue Date: {ticket.issueDate.strftime('%Y-%m-%d')}").pack(anchor="w")
                 ttk.Label(ticket_frame, text=f"Price: ${ticket.calculate_price():.2f}").pack(anchor="w")
                 
                 if ticket.seat:
                     ttk.Label(ticket_frame, text=f"Seat: {ticket.seat.seatID}").pack(anchor="w")
+                
+                if hasattr(ticket, "race_date") and ticket.race_date:
+                    ttk.Label(ticket_frame, text=f"Race Date: {ticket.race_date}").pack(anchor="w")
 
+                def delete_ticket(t=ticket):
+                    if messagebox.askyesno("Confirm", "Are you sure you want to delete this ticket?"):
+                        t.seat.is_reserved = False
+                        self.current_user.purchase_history.tickets.remove(t)
+                        self.save_data()
+                        messagebox.showinfo("Deleted", "Ticket removed successfully.")
+                        history_window.destroy()
+                        self.show_purchase_history()
+    
+                ttk.Button(ticket_frame, text="Cancel Ticket", command=delete_ticket).pack(anchor="e", pady=5)
+            canvas.pack(side="left", fill="both", expand=True)
+            scrollbar.pack(side="right", fill="y")
+        
+    def show_race_info(self):
+        info_window = tk.Toplevel(self.root)
+        info_window.title("Race & Venue Info")
+        info_window.geometry("500x400")
+
+        frame = ttk.Frame(info_window, padding=20)
+        frame.pack(fill="both", expand=True)
+
+        info = (
+            "Upcoming Races:\n"
+            "- 1st June 2025 – Silverstone\n"
+            "- 15th June 2025 – Monaco\n"
+            "- 1st July 2025 – Yas Marina\n\n"
+            "Venue Services:\n"
+            "- Free Parking\n"
+            "- Food Courts\n"
+            "- VIP Lounges\n"
+            "- Shuttle Buses"
+        )
+
+        ttk.Label(frame, text=info, justify="left", style='TLabel').pack(anchor="w")
+    
     def show_seat_selection(self, ticket_type):
-        seat_window = tk.Toplevel()
+        seat_window = tk.Toplevel(self.root)
         seat_window.title("Select Your Seat")
-        
-        canvas = tk.Canvas(seat_window)
-        scrollbar = ttk.Scrollbar(seat_window, orient="vertical", command=canvas.yview)
-        scrollable_frame = ttk.Frame(canvas)
-        
-        canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
-        canvas.configure(yscrollcommand=scrollbar.set)
-        
-        # Create a smaller subset of seats for demonstration purposes
-        row_limit = min(10, self.venue.rows)
-        col_limit = min(10, self.venue.seats_per_row)
-        
-        for r in range(row_limit):
-            row_frame = ttk.Frame(scrollable_frame)
-            row_frame.pack()
-            for s in range(col_limit):
-                seat = self.venue.seats[r][s]
-                bg = "green" if not seat.is_reserved else "red"
-                btn = ttk.Button(row_frame, text=seat.seatID, width=4,
-                               state="disabled" if seat.is_reserved else "normal",
-                               style=f"{bg}.TButton")
-                btn.grid(row=r, column=s, padx=2, pady=2)
-                btn.configure(command=lambda s=seat: self.finalize_purchase(s, ticket_type))
-        
+        seat_window.geometry("800x600")
+        seat_window.minsize(400, 300)
+    
+        main_frame = ttk.Frame(seat_window, padding=20)
+        main_frame.pack(fill="both", expand=True)
+    
+        ttk.Label(main_frame, text="Select Your Seat", style='Header.TLabel').pack(pady=(0, 15))
+    
+        # Create a canvas with scrollbars
+        canvas = tk.Canvas(main_frame, borderwidth=0)
+        scrollbar_v = ttk.Scrollbar(main_frame, orient="vertical", command=canvas.yview)
+        scrollbar_h = ttk.Scrollbar(main_frame, orient="horizontal", command=canvas.xview)
+    
+        # Configure the canvas
+        canvas.configure(yscrollcommand=scrollbar_v.set, xscrollcommand=scrollbar_h.set)
+    
+        # Pack the scrollbars and canvas
+        scrollbar_v.pack(side="right", fill="y")
+        scrollbar_h.pack(side="bottom", fill="x")
         canvas.pack(side="left", fill="both", expand=True)
-        scrollbar.pack(side="right", fill="y")
+    
+        # Create a frame inside the canvas for the seats
+        seat_frame = ttk.Frame(canvas)
+        canvas.create_window((0, 0), window=seat_frame, anchor="nw")
+    
+        # Update the scrollregion when the frame size changes
+        seat_frame.bind("<Configure>", lambda e: canvas.configure(scrollregion=canvas.bbox("all")))
+    
+        group_var = tk.BooleanVar()
+        group_check = ttk.Checkbutton(main_frame, text="Group Purchase (5+ tickets)", 
+                            variable=group_var)
+        group_check.pack(pady=5)
 
-    def finalize_purchase(self, seat, ticket_type):
-        if seat.reserve():
-            ticket = ticket_type(len(self.current_user.purchase_history.tickets) + 1, 100)
-            ticket.seat = seat
-            payment_window = tk.Toplevel()
-            payment_window.title("Payment Details")
+        # Create a list to store selected seats
+        selected_seats = []
+    
+        # Create the seat grid
+        for r in range(self.venue.rows):
+            for s in range(self.venue.seats_per_row):
+                seat = self.venue.seats[r][s]
+        
+                # Choose style based on seat reservation status
+                style = "Reserved.TButton" if seat.is_reserved else "Available.TButton"
+                state = "disabled" if seat.is_reserved else "normal"
+        
+                btn = ttk.Button(seat_frame, text=seat.seatID, width=4,
+                            state=state, style=style)
+                btn.grid(row=r, column=s, padx=2, pady=2)
+        
+                if not seat.is_reserved:
+                    # Store a reference to the button for toggling selection
+                    seat.button = btn
             
-            ttk.Label(payment_window, text="Payment Method:").grid(row=0, column=0)
-            method_var = tk.StringVar()
-            ttk.Combobox(payment_window, textvariable=method_var, 
-                        values=["Credit/Debit", "Digital Wallet"]).grid(row=0, column=1)
+                    # Create a function to toggle seat selection
+                    def toggle_seat(s=seat, b=btn):
+                        if s in selected_seats:
+                            selected_seats.remove(s)
+                            b.configure(style="Available.TButton")
+                        else:
+                            selected_seats.append(s)
+                            b.configure(style="Selected.TButton")
             
-            ttk.Label(payment_window, text="Card Number:").grid(row=1, column=0)
-            card_entry = ttk.Entry(payment_window)
-            card_entry.grid(row=1, column=1)
+                    btn.configure(command=toggle_seat)
+
+        # Add a legend
+        legend_frame = ttk.Frame(main_frame)
+        legend_frame.pack(pady=15)
+    
+        available = ttk.Label(legend_frame, text="Available", background="green", width=10)
+        available.pack(side="left", padx=10)
+    
+        selected = ttk.Label(legend_frame, text="Selected", background="blue", width=10)
+        selected.pack(side="left", padx=10)
+    
+        reserved = ttk.Label(legend_frame, text="Reserved", background="red", width=10)
+        reserved.pack(side="left", padx=10)
+        
+        # Race Date selection
+        ttk.Label(main_frame, text="Select Race Date:").pack(pady=(10, 5))
+        date_var = tk.StringVar()
+        date_combo = ttk.Combobox(main_frame, textvariable=date_var, values=[
+            "2025-06-01", "2025-06-15", "2025-07-01"
+        ])
+        date_combo.pack()
+        date_combo.current(0)
+
+        # Add a "Continue to Payment" button
+        def proceed_to_payment():
+            if not selected_seats:
+                messagebox.showwarning("No Selection", "Please select at least one seat.")
+                return
+
+            # Assign selected race date to each ticket before purchase
+            for seat in selected_seats:
+                seat.race_date = date_var.get()  # attach race date to each seat/ticket
+
+            self.finalize_purchase(selected_seats, ticket_type, group_var.get(), date_var.get())
+            seat_window.destroy()
+
+
+        ttk.Button(main_frame, text="Continue to Payment", 
+                command=proceed_to_payment, style="Large.TButton").pack(pady=10)
+
+    def get_next_ticket_id(self):
+        try:
+            with open('tickets.pkl', 'rb') as f:
+                tickets = pickle.load(f)
+            return len(tickets) + 1
+        except (FileNotFoundError, EOFError):
+            return 1
+        
+    def finalize_purchase(self, seats, ticket_type, is_group=False, race_date=None):
+        selected_seats = []  # To track all selected seats
+        total_price = 0      # To track the total price for all tickets
+
+        # Group purchase logic (applies to all seats as a single group)
+        if is_group:
+            quantity = simpledialog.askinteger("Group Purchase", 
+                                        "How many tickets in your group?",
+                                        minvalue=5, maxvalue=20)
+            if quantity is None:  # User cancelled
+                return
+        else:
+            quantity = len(seats)  # Each seat counts as one
+
+        # Loop over each seat in the selection
+        for seat in seats:
+            if seat.reserve():
+                ticket_id = self.get_next_ticket_id()
             
-            ttk.Label(payment_window, text="Expiry (MM/YY):").grid(row=2, column=0)
-            expiry_entry = ttk.Entry(payment_window)
-            expiry_entry.grid(row=2, column=1)
+                # Calculate price for this seat
+                ticket = GroupDiscount(ticket_id, 100) if is_group else ticket_type(ticket_id, 100)
             
-            def process_payment():
-                payment = Payment(
-                    len(self.current_user.purchase_history.tickets) + 1,
-                    ticket.calculate_price(),
-                    method_var.get(),
-                    card_entry.get(),
-                    expiry_entry.get()
-                )
-                if payment.process_payment():
-                    self.current_user.purchase_history.add_ticket(ticket)
-                    self.save_data()
-                    messagebox.showinfo("Success", "Ticket purchased successfully!")
-                    payment_window.destroy()
+                # For group discount, the price is calculated once for each seat
+                if is_group:
+                    price = ticket.calculate_price(quantity) 
                 else:
-                    messagebox.showerror("Error", "Payment failed. Please check your details.")
+                    price = ticket.calculate_price()
+                
+                total_price += price  # Add to the total price
             
-            ttk.Button(payment_window, text="Complete Purchase", command=process_payment).grid(row=3, columnspan=2)
+                ticket.seat = seat
+                ticket.race_date = race_date
+                selected_seats.append(ticket)  # Track this ticket for later payment
+            else:
+                messagebox.showwarning("Seat Not Available", f"Seat {seat.seatID} is already reserved.")
+                # Undo all reservations made so far
+                for s in selected_seats:
+                    s.seat.is_reserved = False
+                return  # Exit if a seat is unavailable
+        
+        # Payment window and payment details
+        payment_window = tk.Toplevel(self.root)
+        payment_window.title("Payment Details")
+        payment_window.geometry("500x300")
+        payment_window.minsize(400, 250)
 
-    def show_admin_dashboard(self):
-        admin_frame = ttk.LabelFrame(self.root, text="Admin Dashboard", padding=10)
-        admin_frame.pack(fill="both", expand=True, padx=20, pady=20)
+        main_frame = ttk.Frame(payment_window, padding=20)
+        main_frame.pack(fill="both", expand=True)
+
+        # Configure grid for responsiveness
+        main_frame.columnconfigure(1, weight=1)
+
+        ttk.Label(main_frame, text="Payment Details", style='Header.TLabel').grid(
+        row=0, column=0, columnspan=2, pady=(0, 15))
+
+        # Payment Method selection
+        tk.Label(main_frame, text="Payment Method:").grid(row=1, column=0, sticky="w", pady=5)
+        method_var = tk.StringVar()
+        method_combo = ttk.Combobox(main_frame, textvariable=method_var, 
+                                    values=["Credit/Debit", "Digital Wallet"])
+        method_combo.grid(row=1, column=1, sticky="ew", padx=5)
+        method_combo.current(0)
+
+        # Card Number and Expiry inputs
+        card_label = ttk.Label(main_frame, text="Card Number:")
+        card_label.grid(row=2, column=0, sticky="w", pady=5)
+        card_entry = ttk.Entry(main_frame)
+        card_entry.grid(row=2, column=1, sticky="ew", padx=5)
+
+        expiry_label = ttk.Label(main_frame, text="Expiry (MM/YY):")
+        expiry_label.grid(row=3, column=0, sticky="w", pady=5)
+        expiry_entry = ttk.Entry(main_frame)
+        expiry_entry.grid(row=3, column=1, sticky="ew", padx=5)
+
+        # Function to hide/show card fields based on method
+        def update_payment_fields(*args):
+            if method_var.get() == "Credit/Debit":
+                card_label.grid()
+                card_entry.grid()
+                expiry_label.grid()
+                expiry_entry.grid()
+            else:
+                card_entry.delete(0, 'end')
+                expiry_entry.delete(0, 'end')
+                card_label.grid_remove()
+                card_entry.grid_remove()
+                expiry_label.grid_remove()
+                expiry_entry.grid_remove()
+
+        method_var.trace_add("write", update_payment_fields)
+        update_payment_fields()
+
+
+        # Price information
+        price_frame = ttk.Frame(main_frame)
+        price_frame.grid(row=4, column=0, columnspan=2, pady=10, sticky="ew")
+
+        ttk.Label(price_frame, text=f"Total Price: ${total_price:.2f}",  # Use total_price here
+            font=('Helvetica', 12, 'bold')).pack(side="right")
+
+        # Create the button frame here
+        button_frame = ttk.Frame(main_frame)
+        button_frame.grid(row=5, column=0, columnspan=2, pady=10)
+
+        def process_payment():
+            # Create a single payment for the total
+            payment = Payment(
+                len(self.current_user.purchase_history.tickets) + 1,
+                total_price,  # Use the total price
+                method_var.get(),
+                card_entry.get(),
+                expiry_entry.get()
+            )
+    
+            if not payment.process_payment():
+                messagebox.showerror("Error", "Payment failed. Please check your details.")
+                # Unreserve the seats
+                for ticket in selected_seats:
+                    ticket.seat.is_reserved = False
+                return  # Exit if payment failed
+
+            # If payment is successful, add all tickets to purchase history
+            for ticket in selected_seats:
+                if hasattr(ticket.seat, "button"):
+                    del ticket.seat.button  # Remove GUI reference before pickling
+                self.current_user.purchase_history.add_ticket(ticket)
+                self.save_ticket(ticket)
+            self.save_data()
+            messagebox.showinfo("Success", "Tickets purchased successfully!")
+            payment_window.destroy()
+
+
+        ttk.Button(button_frame, text="Complete Purchase", command=process_payment, 
+            style="Large.TButton", width=20).pack()
+
+
+    def save_ticket(self, ticket):
+        try:
+            with open('tickets.pkl', 'rb') as f:
+                all_tickets = pickle.load(f)
+        except (FileNotFoundError, EOFError):
+            all_tickets = []
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to load existing tickets: {e}")
+            return
+
+        all_tickets.append(ticket)
+        try:
+            with open('tickets.pkl', 'wb') as f:
+                pickle.dump(all_tickets, f)
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to save ticket: {e}")
+
+
+    def show_admin_dashboard(self, parent_frame):
+        admin_frame = ttk.LabelFrame(parent_frame, text="Admin Dashboard", padding=10)
+        admin_frame.grid(row=3, column=0, sticky="ew", pady=10)
         
+        # Create a two-column layout for admin controls
+        admin_content = ttk.Frame(admin_frame)
+        admin_content.pack(fill="both", expand=True)
+        admin_content.columnconfigure(0, weight=1)
+        admin_content.columnconfigure(1, weight=1)
+        
+        # Sales data
         sales = self.current_user.view_sales_data()
-        ttk.Label(admin_frame, text=f"Total Tickets Sold: {sales}").pack(pady=5)
+        sales_frame = ttk.Frame(admin_content)
+        sales_frame.grid(row=0, column=0, sticky="nsew", padx=5, pady=5)
         
-        ttk.Button(admin_frame, text="Manage Discounts", 
-                  command=self.current_user.manage_discounts).pack(fill="x", pady=5)
+        ttk.Label(sales_frame, text="Sales Data", font=('Helvetica', 12, 'bold')).pack(anchor="w")
+        ttk.Label(sales_frame, text=f"Total Tickets Sold: {sales}").pack(anchor="w", pady=5)
         
-        ttk.Button(admin_frame, text="View Venue Status",
-                  command=lambda: messagebox.showinfo("Venue Status", 
-                  f"Available Seats: {len(self.venue.get_available_seats())}")).pack(fill="x", pady=5)
+        # Admin controls
+        controls_frame = ttk.Frame(admin_content)
+        controls_frame.grid(row=0, column=1, sticky="nsew", padx=5, pady=5)
+        
+        ttk.Button(controls_frame, text="Manage Discounts", 
+                 command=self.current_user.manage_discounts, width=20).pack(fill="x", pady=5)
+        
+        ttk.Button(controls_frame, text="View Venue Status",
+                 command=lambda: messagebox.showinfo("Venue Status", 
+                 f"Available Seats: {len(self.venue.get_available_seats())}"), 
+                 width=20).pack(fill="x", pady=5)
 
     def logout(self):
+        """Log out the current user and return to the login screen."""
         self.current_user = None
-        self.clear_frames()
         self.create_login_frame()
 
 if __name__ == "__main__":
