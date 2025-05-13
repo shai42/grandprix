@@ -6,19 +6,27 @@ import re
 import os
 # -------------------- CUSTOM EXCEPTIONS --------------------#
 class InvalidEmailError(Exception):
+    """Raised when an email format is invalid."""
     pass
 
 class DuplicateUserError(Exception):
+    """Raised when a user tries to register with an existing email."""
     pass
 
 class PaymentError(Exception):
+    """Raised when payment processing fails."""
     pass
 
 class InvalidDiscountError(Exception):
+    """Raised when an invalid discount is applied."""
     pass
 # -------------------- THE CLASS IMPLEMENTATIONS ----------------#
 class User:
+    """Represents a general user with personal information and ticket history."""
+    
     def __init__(self, userID, name, email, password):
+        """Initialize a User with ID, name, email, and password."""
+
         self.userID = userID
         self.name = name
         self.email = email
@@ -26,13 +34,18 @@ class User:
         self.purchase_history = PurchaseHistory()
 
     def login(self, email, password):
+        """Check if the provided email and password match the user's credentials."""
         return self.email == email and self.password == password
 
     def view_history(self):
+        """Return the list of tickets from the user's purchase history."""
         return self.purchase_history.get_history()
 
 class Admin(User):
+    """Represents an admin user who can view sales and manage discounts."""
+
     def view_sales_data(self):
+        """Return the number of tickets sold from the ticket data file."""
         try:
             with open('tickets.pkl', 'rb') as f:
                 tickets = pickle.load(f)
@@ -41,10 +54,14 @@ class Admin(User):
             return 0
         
     def manage_discounts(self):
+        """Open a GUI window for managing discount entries."""
         DiscountManager().manage_discounts()
 
 class Ticket:
+    """Base class for different ticket types with price and seat/event info."""
+
     def __init__(self, ticketID, price):
+        """Initialize a Ticket with an ID and price."""
         self.ticketID = ticketID
         self.price = price
         self.issueDate = datetime.now()
@@ -52,38 +69,50 @@ class Ticket:
         self.event = None  
 
     def calculate_price(self):
+        """Return the base price of the ticket (can be overridden)."""
         return self.price
 
 class SingleRacePass(Ticket):
+    """Represents a single race pass ticket with a 5% discount."""
     def calculate_price(self):
         return self.price * 0.95  # 5% discount
 
 class WeekendPackage(Ticket):
+    """Represents a weekend package ticket with a 15% discount."""
     def calculate_price(self):
         return self.price * 0.85  # 15% discount
 
 class SeasonMembership(Ticket):
+    """Represents a season membership ticket with a 25% discount."""
     def calculate_price(self):
         return self.price * 0.75  # 25% discount
 
 class GroupDiscount(Ticket):
+    """Represents a group ticket, with discount applied based on quantity."""
+    
     def calculate_price(self, quantity):
+        """Apply a 20% discount if 5 or more tickets are purchased."""
         if quantity >= 5:
             return self.price * 0.80  # 20% discount
         return self.price
 
 class Event:
+    """Represents a racing event with date, name, and venue."""
     def __init__(self, eventID, name, date, venue):
+        """Initialize an Event with ID, name, date, and venue."""
         self.eventID = eventID
         self.name = name
         self.date = date  # datetime.date object
         self.venue = venue  # a Venue object
 
     def get_event_info(self):
+        """Return a formatted string with event name, location, and date."""
         return f"{self.name} at {self.venue.location} on {self.date.strftime('%Y-%m-%d')}"
 
 class Venue:
+    """Represents a venue with seating layout and capacity."""
     def __init__(self, venueID, location, capacity, rows, seats_per_row):
+        """Initialize a venue with ID, location, and seat grid dimensions."""
         self.venueID = venueID
         self.location = location
         self.capacity = capacity
@@ -93,21 +122,29 @@ class Venue:
                       for r in range(1, rows+1)]
 
     def get_available_seats(self):
+        """Return a list of all seats that are not reserved."""
         return [seat for row in self.seats for seat in row if not seat.is_reserved]
 
 class Seat:
+    """Represents a seat in a venue."""
+
     def __init__(self, seatID):
+        """Initialize a seat with a unique ID and reservation status."""
         self.seatID = seatID
         self.is_reserved = False
 
     def reserve(self):
+        """Reserve the seat if it's not already reserved."""
         if not self.is_reserved:
             self.is_reserved = True
             return True
         return False
 
 class Discount:
+    """Represents a discount applied to ticket prices."""
+
     def __init__(self, discountID, description, percentage):
+        """Initialize a discount with ID, description, and percentage."""
         self.discountID = discountID
         self.description = description
         self.percentage = percentage
@@ -131,10 +168,14 @@ class Discount:
         self.percentage = percentage
     
     def apply_discount(self, amount):
+        """Return the price after applying the discount percentage."""
         return amount * (1 - self.percentage/100)
     
 class DiscountManager:
+    """Handles storage and GUI for managing multiple discounts."""
+    
     def __init__(self):
+        """Load existing discounts from file or initialize an empty list."""
         try:
             with open('discounts.pkl', 'rb') as f:
                 self.discounts = pickle.load(f)
@@ -142,10 +183,12 @@ class DiscountManager:
             self.discounts = []
 
     def save_discounts(self):
+        """Save all discounts to the discounts file."""
         with open('discounts.pkl', 'wb') as f:
             pickle.dump(self.discounts, f)
 
     def manage_discounts(self):
+        """Display a Tkinter window to add and save discounts."""
         management_window = tk.Toplevel()
         management_window.title("Discount Management")
         management_window.geometry("400x300")
@@ -169,6 +212,7 @@ class DiscountManager:
         content_frame.columnconfigure(1, weight=1)
         
         def add_discount():
+            """Add a new discount entry from the form input."""
             try:
                 discount = Discount( 
                     int(id_entry.get()),
@@ -188,7 +232,9 @@ class DiscountManager:
         ttk.Button(btn_frame, text="Add Discount", command=add_discount, width=20).pack()
 
 class Payment:
+    """Handles user payment data and basic validation."""
     def __init__(self, paymentID, amount, method, card_number=None, expiry=None):
+        """Initialize payment with amount, method, and optional card info."""
         self.paymentID = paymentID
         self.amount = amount
         self.date = datetime.now()
@@ -197,38 +243,46 @@ class Payment:
         self.expiry = expiry
 
     def process_payment(self):
+        """Return True if the payment is valid, otherwise False."""
         if self.validate_card():
             return True
         return False
 
     def validate_card(self):
+        """Validate credit card number and expiry format."""
         if self.method == "Credit/Debit":
             return re.match(r'^\d{16}$', self.card_number) and re.match(r'^\d{2}/\d{2}$', self.expiry)
         return True
 
 class PurchaseHistory:
+    """Tracks tickets purchased by a user."""
+    
     def __init__(self):
+        """Initialize with an empty list of tickets."""
         self.tickets = []
 
     def add_ticket(self, ticket):
+        """Add a ticket to the purchase history."""
         self.tickets.append(ticket)
         
     def get_history(self):
+        """Return all purchased tickets."""
         return self.tickets
 
 # -------------------- GUI IMPLEMENTATION --------------------
 from datetime import date
 class GrandPrixApp:
     def __init__(self):
+        # Initialize the main application window with styling and layout
         self.root = tk.Tk()
-        self.root.configure(bg="#f5f0e1")  # Set root window to light beige
+        self.root.configure(bg="#f5f0e1")  #Set root window to light beige
         self.root.title("Grand Prix Experience")
-        self.root.geometry("1400x900")  # Set initial window size
-        self.root.minsize(600, 400)    # Set minimum window size
+        self.root.geometry("1400x900")  #Set initial window size
+        self.root.minsize(600, 400)    #Set minimum window size
         
-        # Apply a theme
+        # Configure UI theme
         self.style = ttk.Style()
-        self.style.theme_use('clam')  # clam allows bg color override
+        self.style.theme_use('clam')  # Use clam to allow background color changes
 
         # Light beige theme styling
         bg_color = "#f5f0e1"
@@ -240,28 +294,31 @@ class GrandPrixApp:
         self.style.configure('Large.TButton', font=('Helvetica', 12), padding=8)
 
         
-        # Configure custom colors for seat buttons
+         # Set button styles for seat selection
         self.style.configure('Available.TButton', background='green')
         self.style.configure('Reserved.TButton', background='red')
-        self.style.configure('Selected.TButton', background='blue')  # Added missing style
+        self.style.configure('Selected.TButton', background='blue')  
         
+        # Initialize session variables and events
         self.current_user = None
         self.venue = Venue(1, "Silverstone Circuit", 150000, 10, 10)
         self.events = [
             Event(1, "Silverstone GP", date(2025, 6, 1), self.venue),
             Event(2, "Monaco GP", date(2025, 6, 15), self.venue),
             Event(3, "Yas Marina GP", date(2025, 7, 1), self.venue)
-        ]       
+        ]
+        # Load user and discount data from files
         self.load_data()
         
-        # Main container
+        # Set up the main container for GUI layout
         self.main_container = ttk.Frame(self.root)
         self.main_container.pack(fill="both", expand=True)
         
-        # Create login frame
+        # Display the login screen on launch
         self.create_login_frame()
 
     def load_data(self):
+        # Load registered users
         try:
             with open('users.pkl', 'rb') as f:
                 self.users = pickle.load(f)
@@ -270,12 +327,14 @@ class GrandPrixApp:
             print("⚠️ No users file found or it was empty/corrupted.")
             self.users = []
 
+        # Load available discounts
         try:
             with open('discounts.pkl', 'rb') as f:
                 self.discounts = pickle.load(f)
         except (FileNotFoundError, EOFError):
             self.discounts = []
 
+    # Remove any button references from objects before pickling
     def strip_gui_from_users(self):
         for user in self.users:
             for ticket in user.purchase_history.get_history():
@@ -288,6 +347,7 @@ class GrandPrixApp:
                     del seat.button
 
     def save_data(self):
+        # Clean GUI elements and save all user + discount data to disk
         self.strip_gui_from_users()
         self.strip_gui_from_venue()
         with open('users.pkl', 'wb') as f:
@@ -298,6 +358,8 @@ class GrandPrixApp:
 
 
     def create_login_frame(self):
+        # Generate the login screen with email/password entry and buttons
+
         self.clear_main_container()
         
         # Center the login form
@@ -330,6 +392,7 @@ class GrandPrixApp:
         spacer_bottom.pack(fill="both", expand=True)
 
     def login(self):
+        # Check user credentials and show dashboard if correct
         email = self.email_entry.get()
         password = self.password_entry.get()
         
@@ -343,6 +406,7 @@ class GrandPrixApp:
         messagebox.showerror("Error", "Invalid email or password")
 
     def create_registration_frame(self):
+        # Show registration window to register a new user or admin
         reg_window = tk.Toplevel(self.root)
         reg_window.title("Registration")
         reg_window.geometry("500x350")
@@ -351,27 +415,33 @@ class GrandPrixApp:
         content_frame = ttk.Frame(reg_window, padding=20)
         content_frame.pack(fill="both", expand=True)
         
-        # Make form elements responsive
+        # Make the right column (index 1) expand with the window
         content_frame.columnconfigure(1, weight=1)
         
+        # Registration form title
         ttk.Label(content_frame, text="Registration", style='Header.TLabel').grid(row=0, columnspan=2, pady=10)
         
+        # Name field
         ttk.Label(content_frame, text="Name:").grid(row=1, column=0, sticky="w", pady=5)
         name_entry = ttk.Entry(content_frame)
         name_entry.grid(row=1, column=1, sticky="ew", padx=5)
         
+        # Email field
         ttk.Label(content_frame, text="Email:").grid(row=2, column=0, sticky="w", pady=5)
         email_entry = ttk.Entry(content_frame)
         email_entry.grid(row=2, column=1, sticky="ew", padx=5)
         
+        # Password field
         ttk.Label(content_frame, text="Password:").grid(row=3, column=0, sticky="w", pady=5)
         password_entry = ttk.Entry(content_frame, show="*")
         password_entry.grid(row=3, column=1, sticky="ew", padx=5)
-        
+
+        # Optional admin code input (used to register admin accounts)
         ttk.Label(content_frame, text="Admin Code (if applicable):").grid(row=4, column=0, sticky="w", pady=5)
         admin_code_entry = ttk.Entry(content_frame, show="*")
         admin_code_entry.grid(row=4, column=1, sticky="ew", padx=5)
         
+        # Register user logic with validations
         def register_user():
             try:
                 email= email_entry.get()
@@ -395,16 +465,18 @@ class GrandPrixApp:
             except (InvalidEmailError, DuplicateUserError) as e:
                 messagebox.showerror("Error", str(e))
         
+        # Registration button
         button_frame = ttk.Frame(content_frame)
         button_frame.grid(row=5, column=0, columnspan=2, pady=15)
-        
         ttk.Button(button_frame, text="Register", command=register_user, width=15).pack()
-
+    
+    # Clear the main app container to redraw screens like dashboard/login
     def clear_main_container(self):
         # Clear all widgets from the main container
         for widget in self.main_container.winfo_children():
             widget.destroy()
 
+    # Dashboard displayed after successful login
     def show_dashboard(self):
         self.clear_main_container()
         
@@ -436,6 +508,7 @@ class GrandPrixApp:
         ticket_buttons_frame = ttk.Frame(left_panel)
         ticket_buttons_frame.pack(fill="both", expand=True)
         
+        # Define ticket options with descriptions
         ticket_options = [
             (SingleRacePass, "Single Race Pass", "$100 – One race access. Basic seating."),
             (WeekendPackage, "Weekend Package", "$180 – Whole weekend. Premium zone access."),
@@ -443,6 +516,7 @@ class GrandPrixApp:
             (GroupDiscount, "Group Discount", "$80 per ticket – Min 5 tickets. Group seating.")
         ]
 
+        # Loop to display ticket type buttons with descriptions
         for ticket_type, label, desc in ticket_options:
             ttk.Label(ticket_buttons_frame, text=desc).pack(pady=(5, 0))
             btn = ttk.Button(ticket_buttons_frame, text=label, style="Large.TButton",
@@ -465,57 +539,79 @@ class GrandPrixApp:
             self.show_admin_dashboard(dashboard_frame)
             
     def show_user_profile(self):
+        # Create a new window for profile editing
         profile_window = tk.Toplevel(self.root)
         profile_window.title("My Profile")
         profile_window.geometry("400x300")
     
+        # Main frame inside the profile window
         main_frame = ttk.Frame(profile_window, padding=20)
         main_frame.pack(fill="both", expand=True)
-    
+        
+        # Header label
         ttk.Label(main_frame, text="Edit Profile", style="Header.TLabel").grid(row=0, columnspan=2, pady=10)
 
+        # Name entry field
         ttk.Label(main_frame, text="Name:").grid(row=1, column=0, sticky="w", pady=5)
         name_entry = ttk.Entry(main_frame)
         name_entry.insert(0, self.current_user.name)
         name_entry.grid(row=1, column=1, sticky="ew")
 
+        # Email entry field
         ttk.Label(main_frame, text="Email:").grid(row=2, column=0, sticky="w", pady=5)
         email_entry = ttk.Entry(main_frame)
         email_entry.insert(0, self.current_user.email)
         email_entry.grid(row=2, column=1, sticky="ew")
 
+        # Password entry field
         ttk.Label(main_frame, text="Password:").grid(row=3, column=0, sticky="w", pady=5)
         password_entry = ttk.Entry(main_frame, show="*")
         password_entry.insert(0, self.current_user.password)
         password_entry.grid(row=3, column=1, sticky="ew")
-
+        
+        # Function to save the updated profile
         def save_profile():
             try:
+                # Validate email format
                 if not re.match(r"[^@]+@[^@]+\.[^@]+", email_entry.get()):
                     raise InvalidEmailError("Invalid email format.")
+               
+                # Update current user data
                 self.current_user.name = name_entry.get()
                 self.current_user.email = email_entry.get()
                 self.current_user.password = password_entry.get()
-                self.save_data()
+                
+                self.save_data()  # Save changes to file
                 messagebox.showinfo("Success", "Profile updated.")
                 profile_window.destroy()
             except InvalidEmailError as e:
                 messagebox.showerror("Error", str(e))
-
+        
+        # Save changes button
         ttk.Button(main_frame, text="Save Changes", command=save_profile).grid(row=4, column=0, columnspan=2, pady=15)
+        # Delete account button
         ttk.Button(main_frame, text="Delete My Account", command=lambda: self.delete_current_account(profile_window), style="TButton").grid(row=5, column=0, columnspan=2, pady=10)
         
     def delete_current_account(self, window):
+        # Ask user for confirmation before deleting the account
         if messagebox.askyesno("Confirm", "Are you sure you want to delete your account? This action is irreversible."):
+            # Remove the user from the users list
             self.users = [u for u in self.users if u.userID != self.current_user.userID]
+           
+            # Save updated user data
             self.save_data()
+           
+            # Notify user and reset session
             messagebox.showinfo("Deleted", "Your account has been deleted.")
             window.destroy()
             self.current_user = None
+        
+            # Return to login screen
             self.create_login_frame()
 
 
     def show_purchase_history(self):
+        # Create a new window to display the purchase history
         history_window = tk.Toplevel(self.root)
         history_window.title("Purchase History")
     
@@ -525,18 +621,23 @@ class GrandPrixApp:
         width = 600
         history_window.geometry(f"{width}x{height}")
 
+        # Main frame to hold all the content
         main_frame = ttk.Frame(history_window, padding=20)
         main_frame.pack(fill="both", expand=True)
 
+        # Section title
         ttk.Label(main_frame, text="Purchase History", style='Header.TLabel').pack(anchor="w", pady=(0, 10))
 
+        # If user has no ticket history, show a message
         if not tickets:
             ttk.Label(main_frame, text="No purchase history found.").pack(padx=20, pady=20)
         else:
+            # Display each ticket in a labeled frame
             for ticket in tickets:
                 ticket_frame = ttk.LabelFrame(main_frame, text=f"Ticket #{ticket.ticketID}", padding=10)
                 ticket_frame.pack(fill="x", pady=5)
 
+                # Ticket details
                 ttk.Label(ticket_frame, text=f"Issue Date: {ticket.issueDate.strftime('%Y-%m-%d')}").pack(anchor="w")
                 ttk.Label(ticket_frame, text=f"Price: ${ticket.calculate_price():.2f}").pack(anchor="w")
                 if ticket.seat:
@@ -544,6 +645,7 @@ class GrandPrixApp:
                 if ticket.event:
                     ttk.Label(ticket_frame, text=f"Event: {ticket.event.get_event_info()}").pack(anchor="w")
 
+                # Add a button to cancel (delete) the ticket
                 def delete_ticket(t=ticket):
                     if messagebox.askyesno("Confirm", "Are you sure you want to delete this ticket?"):
                         t.seat.is_reserved = False
@@ -556,15 +658,19 @@ class GrandPrixApp:
                 ttk.Button(ticket_frame, text="Cancel Ticket", command=delete_ticket).pack(anchor="e", pady=5)
 
     def select_event_before_booking(self, ticket_type):
+        # Create a popup window for event selection
         event_window = tk.Toplevel(self.root)
         event_window.title("Select Event")
         event_window.geometry("400x200")
 
+        # Frame to hold the dropdown and button
         frame = ttk.Frame(event_window, padding=20)
         frame.pack(fill="both", expand=True)
 
+        # Instruction label
         ttk.Label(frame, text="Choose an Event:", style='Header.TLabel').pack(pady=10)
 
+        # Create a dropdown with event options
         event_var = tk.StringVar()
         events = [
             ("2025-06-01", "Silverstone"),
@@ -574,23 +680,27 @@ class GrandPrixApp:
         combo = ttk.Combobox(frame, textvariable=event_var, state="readonly",
                          values=[f"{date} – {name}" for date, name in events])
         combo.pack(pady=10)
-        combo.current(0)
+        combo.current(0) # Pre-select the first event
 
+        # Continue button to confirm selection and move to seat selection
         def proceed():
-            selected = combo.get().split(" – ")[0]
+            selected = combo.get().split(" - ")[0] # Extract the date from the selection
             event_window.destroy()
-            self.show_seat_selection(ticket_type, selected)
+            self.show_seat_selection(ticket_type, selected)  # Pass selected event date
 
         ttk.Button(frame, text="Continue", command=proceed).pack(pady=10)
     
     def show_race_info(self):
+        # Pass selected event date
         info_window = tk.Toplevel(self.root)
         info_window.title("Race & Venue Info")
         info_window.geometry("500x400")
 
+        # Main frame to contain the race and venue information
         frame = ttk.Frame(info_window, padding=20)
         frame.pack(fill="both", expand=True)
 
+            # information text about upcoming races and venue services
         info = (
             "Upcoming Races:\n"
             "- 1st June 2025 - Silverstone\n"
@@ -602,10 +712,12 @@ class GrandPrixApp:
             "- VIP Lounges\n"
             "- Shuttle Buses"
         )
-
+        
+        # Display the information as a left-aligned label
         ttk.Label(frame, text=info, justify="left", style='TLabel').pack(anchor="w")
     
     def show_seat_selection(self, ticket_type, preselected_date=None):
+        # Create a popup window for seat selection
         seat_window = tk.Toplevel(self.root)
         seat_window.title("Select Your Seat")
 
@@ -616,21 +728,27 @@ class GrandPrixApp:
         total_width = self.venue.seats_per_row * seat_width + padding
         total_height = self.venue.rows * seat_height + 250
         seat_window.geometry(f"{total_width}x{total_height}")
-
+        
+        # Frame for seat selection UI
         main_frame = ttk.Frame(seat_window, padding=20)
         main_frame.pack(fill="both", expand=True)
 
+        # Title label
         ttk.Label(main_frame, text="Select Your Seat", style='Header.TLabel').pack(pady=(0, 15))
 
+        # Checkbox for enabling group ticket purchases
         group_var = tk.BooleanVar()
         group_check = ttk.Checkbutton(main_frame, text="Group Purchase (5+ tickets)", variable=group_var)
         group_check.pack(pady=5)
 
+        # List to keep track of selected seats
         selected_seats = []
-
+    
+        # Frame for the seat grid
         seat_frame = ttk.Frame(main_frame)
         seat_frame.pack()
 
+        # Generate seat buttons and apply styles depending on availability
         for r in range(self.venue.rows):
             for s in range(self.venue.seats_per_row):
                 seat = self.venue.seats[r][s]
@@ -639,7 +757,8 @@ class GrandPrixApp:
 
                 btn = ttk.Button(seat_frame, text=seat.seatID, width=4, state=state, style=style)
                 btn.grid(row=r, column=s, padx=2, pady=2)
-
+                
+                # For available seats, add toggle selection logic
                 if not seat.is_reserved:
                     seat.button = btn
 
@@ -652,7 +771,8 @@ class GrandPrixApp:
                             b.configure(style="Selected.TButton")
 
                     btn.configure(command=toggle_seat)
-
+        
+        # Legend for button colors
         legend_frame = ttk.Frame(main_frame)
         legend_frame.pack(pady=15)
 
@@ -660,6 +780,7 @@ class GrandPrixApp:
         ttk.Label(legend_frame, text="Selected", background="blue", width=10).pack(side="left", padx=10)
         ttk.Label(legend_frame, text="Reserved", background="red", width=10).pack(side="left", padx=10)
 
+        # Button to proceed to payment after seat selection
         def proceed_to_payment():
             event = next((e for e in self.events if str(e.date) == preselected_date), None)
             if not event:
@@ -676,6 +797,10 @@ class GrandPrixApp:
         ttk.Button(main_frame, text="Continue to Payment", command=proceed_to_payment, style="Large.TButton").pack(pady=10)
     
     def get_next_ticket_id(self):
+        """
+        Generate the next unique ticket ID by checking the highest existing ticket ID in the saved file.
+        Returns 1 if the file is missing or empty.
+        """
         try:
             with open('tickets.pkl', 'rb') as f:
                 tickets = pickle.load(f)
@@ -686,10 +811,14 @@ class GrandPrixApp:
             return 1
         
     def finalize_purchase(self, seats, ticket_type, is_group=False, event=None):
+        """
+        Finalizes the ticket purchase after seat selection. Applies pricing rules, 
+        shows the payment interface, and saves the ticket on successful payment.
+        """
         selected_seats = []  # To track all selected seats
         total_price = 0      # To track the total price for all tickets
 
-        # Group purchase logic (applies to all seats as a single group)
+        # If group purchase is selected, ask for group size
         if is_group:
             quantity = simpledialog.askinteger("Group Purchase", 
                                         "How many tickets in your group?",
@@ -699,7 +828,7 @@ class GrandPrixApp:
         else:
             quantity = len(seats)  # Each seat counts as one
 
-        # Loop over each seat in the selection
+        # Iterate through selected seats and reserve them
         for seat in seats:
             
             if len(self.venue.get_available_seats()) < len(seats):
@@ -724,13 +853,13 @@ class GrandPrixApp:
                 ticket.event = event
                 selected_seats.append(ticket)  # Track this ticket for later payment
             else:
+                # If any seat is unavailable, cancel the entire reservation
                 messagebox.showwarning("Seat Not Available", f"Seat {seat.seatID} is already reserved.")
-                # Undo all reservations made so far
                 for s in selected_seats:
                     s.seat.is_reserved = False
                 return  # Exit if a seat is unavailable
         
-        # Payment window and payment details
+        # Open payment interface
         payment_window = tk.Toplevel(self.root)
         payment_window.title("Payment Details")
         payment_window.geometry("500x300")
@@ -745,7 +874,7 @@ class GrandPrixApp:
         ttk.Label(main_frame, text="Payment Details", style='Header.TLabel').grid(
         row=0, column=0, columnspan=2, pady=(0, 15))
 
-        # Payment Method selection
+        # Payment method dropdown
         tk.Label(main_frame, text="Payment Method:").grid(row=1, column=0, sticky="w", pady=5)
         method_var = tk.StringVar()
         method_combo = ttk.Combobox(main_frame, textvariable=method_var, 
@@ -753,7 +882,7 @@ class GrandPrixApp:
         method_combo.grid(row=1, column=1, sticky="ew", padx=5)
         method_combo.current(0)
 
-        # Card Number and Expiry inputs
+        # Credit card input fields
         card_label = ttk.Label(main_frame, text="Card Number:")
         card_label.grid(row=2, column=0, sticky="w", pady=5)
         card_entry = ttk.Entry(main_frame)
@@ -783,14 +912,13 @@ class GrandPrixApp:
         update_payment_fields()
 
 
-        # Price information
+        # Display total price
         price_frame = ttk.Frame(main_frame)
         price_frame.grid(row=4, column=0, columnspan=2, pady=10, sticky="ew")
 
         ttk.Label(price_frame, text=f"Total Price: ${total_price:.2f}",  # Use total_price here
             font=('Helvetica', 12, 'bold')).pack(side="right")
 
-        # Create the button frame here
         button_frame = ttk.Frame(main_frame)
         button_frame.grid(row=5, column=0, columnspan=2, pady=10)
 
@@ -821,7 +949,7 @@ class GrandPrixApp:
                     messagebox.showerror("Error", f"Failed to save ticket: {e}")
                     return
 
-            self.save_data()  # ✅ This now runs only after successful payment and data prep
+            self.save_data()
             messagebox.showinfo("Success", "Tickets purchased successfully!")
             payment_window.destroy()
 
@@ -831,6 +959,10 @@ class GrandPrixApp:
 
 
     def save_ticket(self, ticket):
+        """
+        Save a single ticket to the tickets.pkl file after removing any GUI references.
+        Ensures ticket data is serializable using pickle.
+        """
         import traceback
 
         # Try to load existing tickets or create empty list
@@ -846,7 +978,7 @@ class GrandPrixApp:
             del ticket.seat.button
 
         all_tickets.append(ticket)
-        self.strip_gui_from_venue()
+        self.strip_gui_from_venue() # Also remove any remaining GUI refs from venue
 
         try:
             print("💾 Attempting to save ticket...")
@@ -860,16 +992,20 @@ class GrandPrixApp:
             raise
 
     def show_admin_dashboard(self, parent_frame):
+        """
+        Display the Admin Dashboard section within the user dashboard.
+        Includes ticket sales count and discount/venue controls.
+        """
         admin_frame = ttk.LabelFrame(parent_frame, text="Admin Dashboard", padding=10)
         admin_frame.grid(row=3, column=0, sticky="ew", pady=10)
         
-        # Create a two-column layout for admin controls
+        # Container for admin content in two columns
         admin_content = ttk.Frame(admin_frame)
         admin_content.pack(fill="both", expand=True)
         admin_content.columnconfigure(0, weight=1)
         admin_content.columnconfigure(1, weight=1)
         
-        # Sales data
+        # Sales data section (total tickets sold)
         sales = self.current_user.view_sales_data()
         sales_frame = ttk.Frame(admin_content)
         sales_frame.grid(row=0, column=0, sticky="nsew", padx=5, pady=5)
@@ -877,7 +1013,7 @@ class GrandPrixApp:
         ttk.Label(sales_frame, text="Sales Data", font=('Helvetica', 12, 'bold')).pack(anchor="w")
         ttk.Label(sales_frame, text=f"Total Tickets Sold: {sales}").pack(anchor="w", pady=5)
         
-        # Admin controls
+        # Admin control buttons: Manage Discounts and View Venue Seats
         controls_frame = ttk.Frame(admin_content)
         controls_frame.grid(row=0, column=1, sticky="nsew", padx=5, pady=5)
         
@@ -895,7 +1031,7 @@ class GrandPrixApp:
         self.create_login_frame()
 
 if __name__ == "__main__":
-    # Create necessary files if they don't exist
+    # Ensure required data files exist or create them if missing
     if not os.path.exists('users.pkl'):
         with open('users.pkl', 'wb') as f:
             pickle.dump([], f)
@@ -908,5 +1044,6 @@ if __name__ == "__main__":
         with open('discounts.pkl', 'wb') as f:
             pickle.dump([], f)
 
+    # Launch the application
     app = GrandPrixApp()
     app.root.mainloop()
